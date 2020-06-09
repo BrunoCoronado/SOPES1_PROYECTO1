@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/trext/Documentos/Sopes/Pruebas/main.c
+/home/trext/Documentos/Sopes/SOPES1_PROYECTO1/Pruebas/main.c
 stdio.h
 -
 sys/sysinfo.h

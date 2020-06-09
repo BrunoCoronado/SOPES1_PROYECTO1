@@ -1,4 +1,4 @@
-# Install script for directory: /home/trext/Documentos/Sopes/Pruebas
+# Install script for directory: /home/trext/Documentos/Sopes/SOPES1_PROYECTO1/Pruebas
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/trext/Documentos/Sopes/Pruebas/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/trext/Documentos/Sopes/SOPES1_PROYECTO1/Pruebas/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
