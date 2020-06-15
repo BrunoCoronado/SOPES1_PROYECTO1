@@ -4,7 +4,7 @@
 **Desarrollada por Bruno Coronado [201709362] y Max Florian [201700465]**</br>
 ---
 
-# Modulos de Kernel
+# Modulos de Kernel - Manual de Usuario
 
 ## Módulo de Memoria
 
