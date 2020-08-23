@@ -55,9 +55,6 @@ var (
 var graficaX1 []float64
 var graficaY1 []float64
 
-var graficaX2 []float64
-var graficaY2 []float64
-
 
 type procStruct struct{
 	pid 	string
@@ -82,27 +79,23 @@ func getData(i int, lastMod time.Time) ([]byte, time.Time, error) {
 	case 1:
 		tiempo1 +=  1.0
 		contenido := ""
-		b, err := ioutil.ReadFile("/proc/meminfo")
+		b, err := ioutil.ReadFile("/proc/mem_grupo10")
+	
+		var mem = strings.Split(string(b),"|")
 
-		str := string(b)
-		listaInfo := strings.Split(string(str),"\n")
+		ramTotal, err1 := strconv.Atoi(mem[0])
+		ramLibre, err2 := strconv.Atoi(mem[1])
+		ramUtilizada, err3 := strconv.Atoi(mem[2])
+		ramPorcentaje, err4 := strconv.Atoi(mem[3])
+		//fmt.Println(mem[3])
+		if err1 == nil && err2 == nil && err3 == nil && err4 == nil{
 
-		memTotal := strings.Replace((listaInfo[0])[10:24]," ","",-1)
-		memLibre := strings.Replace((listaInfo[1])[10:24]," ","",-1)
-
-		ramTotal, err1 := strconv.Atoi(memTotal)
-		ramLibre, err2 := strconv.Atoi(memLibre)
+			contenido = "Memoria Total: " + strconv.Itoa(ramTotal) + " MB\n"
+			contenido = contenido + "Memoria Libre: " + strconv.Itoa(ramLibre) + " MB\n"
+			contenido = contenido + "Memoria Utilizada: " + strconv.Itoa(ramUtilizada) + " MB\n"
+			contenido = contenido + "Porcentaje de memoria utilizado: " + strconv.Itoa(ramPorcentaje) + "%\n"
 		
-		if err1 == nil && err2 == nil{
-			ramTotal1 := ramTotal / 1024
-			ramLibre1 := ramLibre / 1024
-			//fmt.Println(strconv.Itoa(ramTotal1)+" - "+strconv.Itoa(ramLibre1))
-			contenido = "Memoria Total: " + strconv.Itoa(ramTotal1) + " MB\n"
-			contenido = contenido + "Memoria Libre: " + strconv.Itoa(ramLibre1) + " MB\n"
-			porcentaje1 := float64(ramLibre1) / float64(ramTotal1) * 100
-			contenido = contenido + "Porcentaje de memoria utilizado: " + fmt.Sprintf("%f", porcentaje1) + "%\n"
-		
-			graficaY1 = append(graficaY1,porcentaje1)
+			graficaY1 = append(graficaY1,float64(ramPorcentaje))
 			graficaX1 = append(graficaX1,tiempo1)
 
 			mainSeries := chart.ContinuousSeries{
@@ -149,81 +142,16 @@ func getData(i int, lastMod time.Time) ([]byte, time.Time, error) {
 		}else{
 			return []byte("Ocurrió\nun\nerror\n"), lastMod, err
 		}
-
-	case 2:
-		tiempo2 +=  1.0
-		var err error
-		err = nil
-		idle0, total0 := getCPUSample()
-		time.Sleep(1 * time.Second)
-		idle1, total1 := getCPUSample()
-
-		idleTicks := float64(idle1 - idle0)
-		totalTicks := float64(total1 - total0)
-		cpuUsage := 100 * (totalTicks - idleTicks) / totalTicks
-		
-
-		contenido := "CPU Total: " + fmt.Sprintf("%f",totalTicks) + " bytes\n"
-		contenido = contenido + "CPU Ocupado: " + fmt.Sprintf("%f",totalTicks-idleTicks) + " bytes\n"
-		contenido = contenido + "Porcentaje del CPU utilizado: " + fmt.Sprintf("%f",cpuUsage) + "%\n"
-
-		graficaY2 = append(graficaY2,cpuUsage)
-		graficaX2 = append(graficaX2,tiempo2)
-
-		mainSeries := chart.ContinuousSeries{
-			Name:    "A test series 2",
-			XValues: graficaX2,
-			YValues: graficaY2,
-		}
-
-		polyRegSeries := &chart.PolynomialRegressionSeries{
-			Degree:      3,
-			InnerSeries: mainSeries,
-		}
-	
-		graph := chart.Chart{
-			Series: []chart.Series{
-				mainSeries,
-				polyRegSeries,
-			},
-		}
-	
-		f, _ := os.Create("graficaresultante2.png")
-		defer f.Close()
-		graph.Render(chart.PNG, f)
-	
-		imgFile, err := os.Open("graficaresultante2.png") // a QR code image
-	
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	
-		defer imgFile.Close()
-
-		fInfo, _ := imgFile.Stat()
-		var size int64 = fInfo.Size()
-		buf := make([]byte, size)
-	
-		fReader := bufio.NewReader(imgFile)
-		fReader.Read(buf)
-	
-		imgBase64Str := base64.StdEncoding.EncodeToString(buf)
-		contenido = contenido + imgBase64Str	
-		return []byte(contenido), lastMod, err
 	
 	case 3:
 		contenido:=""
 		var procesosSt []procStruct
-		files, err := ioutil.ReadDir("/proc")
-		if err != nil {
-			log.Fatal(err)
-		}
+		
 		contenido = contenido + "Procesos en ejecucion: " + strconv.Itoa(contrunning) + "\n"
 		contenido = contenido + "Procesos suspendidos: " + strconv.Itoa(contsleeping) + "\n"
 		contenido = contenido + "Procesos detenidos: " + strconv.Itoa(contstoped) + "\n"
 		contenido = contenido + "Procesos zombie: " + strconv.Itoa(contzombies) + "\n"
-		contenido = contenido + "Procesos en ejecucion: " + strconv.Itoa(contprocesos) + "\n"
+		contenido = contenido + "Total de procesos: " + strconv.Itoa(contprocesos) + "\n"
 		contenido = contenido + "%%"
 		contprocesos = 0
 		contrunning = 0
@@ -243,64 +171,60 @@ func getData(i int, lastMod time.Time) ([]byte, time.Time, error) {
 			</tr>
 		</thead>
 		<tbody>`
-		for _, f := range files {
-			b, err := ioutil.ReadFile("/proc/"+f.Name()+"/status")
+
+			b, err := ioutil.ReadFile("/proc/proce_grupo10")
 			if err == nil {
 				contprocesos += 1
-				str := string(b)
-				listaInfo := strings.Split(string(str),"\n")
-				nombre := strings.Replace((listaInfo[0])[5:],"	","",-1)
-				usuario1 := strings.Replace((listaInfo[8])[4:9],"	","",-1)
-				usuario2,err1 := exec.Command("getent" ,"passwd", usuario1).Output()
-				usuario3 := strings.Split(string(usuario2),":")
-				usuario :=usuario3[0]
-				if err1 != nil {
-					//Entrá aqui cuando no encuentra el username de acuerdo al UID
-				}
-				estado := strings.Replace((listaInfo[2])[6:],"	","",-1)
-				if estado == "S (sleeping)" {
-					contsleeping += 1
-				}else if estado == "R (running)" {
-					contrunning += 1
-				}else if estado == "I (idle)" {
-					contstoped += 1
-				}else {
-					contzombies += 1
-				}
+				cadena := strings.ReplaceAll(string(b),"\n","")
+				proces := strings.Split(string(cadena),"|") //todos los procesos
+				for i:=0; i < len(proces)-1; i++ {
+					proce := strings.Split(proces[i],",") //separar informacion dentro de cada proceso
+					if len(proce) >= 3{
+						pid := proce[0]
+						nombre := proce[1]
+						estado := proce[2]
 
-				var nuevoproc = procStruct{f.Name(),nombre,usuario,estado,"",[]procStruct{}}
-				procesosSt = append(procesosSt,nuevoproc);			
-			}
-			
-		}
-		for _, f := range files {
-			b, err := ioutil.ReadFile("/proc/"+f.Name()+"/status")
-			if err == nil {
-				str := string(b)
-				listaInfo := strings.Split(string(str),"\n")
-				nombre := strings.Replace((listaInfo[0])[5:],"	","",-1)
-				usuario1 := strings.Replace((listaInfo[8])[4:9],"	","",-1)
-				padre := strings.Replace((listaInfo[6])[5:],"	","",-1)
-				usuario2,err1 := exec.Command("getent" ,"passwd", usuario1).Output()
-				usuario3 := strings.Split(string(usuario2),":")
-				usuario :=usuario3[0]
-				if err1 != nil {
-					//Entrá aqui cuando no encuentra el username de acuerdo al UID
-				}
-				estado := strings.Replace((listaInfo[2])[6:],"	","",-1)
-				
+						if estado == "1" {
+							contsleeping += 1
+						}else if estado == "0" {
+							contrunning += 1
+						}else if estado == "8" {
+							contstoped += 1
+						}else if estado == "4" {
+							contzombies += 1
+						}
 
-				var nuevoproc = procStruct{f.Name(),nombre,usuario,estado,"",[]procStruct{}}
-				for i:=0; i < len(procesosSt); i++ {
-					if padre == procesosSt[i].pid && padre != "0" {
-						procesosSt[i].hijos = append(procesosSt[i].hijos,nuevoproc)
+						var nuevoproc = procStruct{pid,nombre,"root",estado,"",[]procStruct{}}
+						
+						if len(proce) > 3 {	//Significa que tiene hijos
+
+							for j:=3;j< len(proce);j++ {
+								procehijo1 := strings.Split(proce[j], "[") 
+								procehijo2 := strings.Split(string(procehijo1[1]), "]")
+								procehijo := strings.Split(string(procehijo2[0]),"#") //separar informacion dentro de cada proceso HIJO 
+								
+								pidh := procehijo[0]
+								nombreh := procehijo[1]
+								estadoh := procehijo[2]
+
+									if estadoh == "1" {
+										contsleeping += 1
+									}else if estadoh == "0" {
+										contrunning += 1
+									}else if estadoh == "8" {
+										contstoped += 1
+									}else if estadoh == "4" {
+										contzombies += 1
+									}
+
+								nuevoproc.hijos = append(nuevoproc.hijos,procStruct{pidh,nombreh,"root",estadoh,"",[]procStruct{}})	//Se agrega un hijo al proceso
+							}
+						}
+						procesosSt = append(procesosSt,nuevoproc);
 					}
-				}
-				
-				
+				}			
 			}
-			
-		}
+
 		for j:=0;j<len(procesosSt);j++ {
 			//ram := strings.Replace((listaInfo[0])[10:24]," ","",-1)
 			contenido= contenido+ `<tr>`
@@ -349,47 +273,6 @@ func getData(i int, lastMod time.Time) ([]byte, time.Time, error) {
 
 }
 
-func getCPUSample() (idle, total uint64) {
-    contents, err := ioutil.ReadFile("/proc/stat")
-    if err != nil {
-        return
-    }
-    lines := strings.Split(string(contents), "\n")
-    for _, line := range(lines) {
-        fields := strings.Fields(line)
-        if fields[0] == "cpu" {
-            numFields := len(fields)
-            for i := 1; i < numFields; i++ {
-                val, err := strconv.ParseUint(fields[i], 10, 64)
-                if err != nil {
-                    fmt.Println("Error: ", i, fields[i], err)
-                }
-                total += val
-                if i == 4 {
-                    idle = val
-                }
-            }
-            return
-        }
-    }
-    return
-}
-
-func getInfoCPU(lastMod2 time.Time) ([]byte, time.Time) {
-	idle0, total0 := getCPUSample()
-    time.Sleep(3 * time.Second)
-    idle1, total1 := getCPUSample()
-
-    idleTicks := float64(idle1 - idle0)
-    totalTicks := float64(total1 - total0)
-	cpuUsage := 100 * (totalTicks - idleTicks) / totalTicks
-	
-
-	contenido2 := "CPU Total: " + fmt.Sprintf("%f",totalTicks) + " bytes\n"
-	contenido2 = contenido2 + "CPU Ocupado: " + fmt.Sprintf("%f",totalTicks-idleTicks) + " bytes\n"
-	contenido2 = contenido2 + "Porcentaje del CPU utilizado: " + fmt.Sprintf("%f",cpuUsage) + "%\n"
-	return []byte(contenido2), lastMod2
-}
 
 func reader(ws *websocket.Conn) {
 	defer ws.Close()
@@ -506,35 +389,6 @@ func ramm(w http.ResponseWriter, r *http.Request) {
 	homeTempl1.Execute(w, &v)
 }
 
-func cpum(w http.ResponseWriter, r *http.Request) {
-	opc = 2
-	if r.URL.Path != "/cpumonitor" {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	p, lastMod, err := getData(2,time.Time{})
-	if err != nil {
-		p = []byte(err.Error())
-		lastMod = time.Unix(0, 0)
-	}
-	var v = struct {
-		Host    	string
-		Data    	string
-		LastMod 	string
-	}{
-		r.Host,
-		string(p),
-		strconv.FormatInt(lastMod.UnixNano(), 16),
-	}
-	homeTempl1.Execute(w, &v)
-}
-
 func procesos(w http.ResponseWriter, r *http.Request) {
 	opc = 3
 	if r.URL.Path != "/procesos" {
@@ -577,13 +431,12 @@ func procesos(w http.ResponseWriter, r *http.Request) {
 
 
 func main() {
-	http.HandleFunc("/",index);
-	http.HandleFunc("/procesos",procesos);
+	http.HandleFunc("/",index)
+	http.HandleFunc("/procesos",procesos)
 	http.HandleFunc("/rammonitor", ramm)
-	http.HandleFunc("/cpumonitor", cpum)
 	http.HandleFunc("/ws", serveWs)
 
-	fmt.Printf("Corriendo correctamente el proyecto en el puerto 3000...\n")
+	fmt.Printf("Corriendo correctamente la practica en el puerto 3000...\n")
 	if err := http.ListenAndServe(*addr, nil); err != nil {
 		log.Fatal(err)
 	}
@@ -607,16 +460,13 @@ const htmlBody = `<!DOCTYPE html>
 			</button>
 			<div class="collapse navbar-collapse" id="navbarSupportedContent">
 				<ul class="navbar-nav mr-auto">
-					<li class="nav-item active">
+					<li class="nav-item">
 						<a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
 					</li>
 					<li class="nav-item">
 						<a class="nav-link" href="/procesos">Processes</a>
 					</li>
-					<li class="nav-item">
-						<a class="nav-link" href="/cpumonitor">CPU Monitor</a>
-					</li>
-					<li class="nav-item">
+					<li class="nav-item active">
 						<a class="nav-link" href="/rammonitor">RAM Monitor</a>
 					</li>
 				</ul>
@@ -636,8 +486,8 @@ const htmlBody = `<!DOCTYPE html>
                 conn.onmessage = function(evt) {
 					console.log('file updated');
 					var contenido = evt.data.split("\n");
-					data.textContent = contenido[0] + "\n" + contenido[1]+ "\n"+ contenido[2]+ "\n";
-					img11.src = "data:image/png;base64," + contenido[3]; 
+					data.textContent = contenido[0] + "\n" + contenido[1]+ "\n"+ contenido[2]+ "\n"+ contenido[3]+ "\n";
+					img11.src = "data:image/png;base64," + contenido[4]; 
                 }
             })();
 		</script>
@@ -664,14 +514,11 @@ const htmlBodyProcesos = `<!DOCTYPE html>
 			</button>
 			<div class="collapse navbar-collapse" id="navbarSupportedContent">
 				<ul class="navbar-nav mr-auto">
-					<li class="nav-item active">
+					<li class="nav-item">
 						<a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
 					</li>
-					<li class="nav-item">
+					<li class="nav-item active">
 						<a class="nav-link" href="/procesos">Processes</a>
-					</li>
-					<li class="nav-item">
-						<a class="nav-link" href="/cpumonitor">CPU Monitor</a>
 					</li>
 					<li class="nav-item">
 						<a class="nav-link" href="/rammonitor">RAM Monitor</a>
